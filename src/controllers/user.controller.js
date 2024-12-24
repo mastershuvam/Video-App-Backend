@@ -230,9 +230,173 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 })
 
+const changeCurrentPassword = asyncHandler(async(req, res) => {
+    const {oldPassword, newPassword} = req.body
+
+    
+
+    const user = await User.findById(req.user?._id)
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    user.password = newPassword
+    await user.save({validateBeforeSave: false})
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"))
+})
+
+
+const getCurrentUser = asyncHandler(async(req, res) => {
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        req.user,
+        "User fetched successfully"
+    ))
+})
+
+const updateAccountDetails = asyncHandler(async(req, res) => {
+    const {fullName, email} = req.body
+
+    if (!fullName || !email) {
+        throw new ApiError(400, "All fields are required")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                email: email
+            }
+        },
+        {new: true}
+        
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details updated successfully"))
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path;
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar file is missing");
+    }
+
+    // Retrieve the user to get the current avatar
+    const user = await User.findById(req.user?._id);
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const oldAvatar = user.avatar;
+
+    // TODO: Delete old image
+    if (oldAvatar) {
+        try {
+            // Assuming deleteFromCloudinary is a utility function
+            await deleteFromCloudinary(oldAvatar);
+        } catch (error) {
+            console.error("Error deleting old avatar:", error);
+        }
+    }
+
+    // Upload the new avatar
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+    if (!avatar.url) {
+        throw new ApiError(400, "Error while uploading avatar");
+    }
+
+    // Update the user's avatar
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                avatar: avatar.url,
+            },
+        },
+        { new: true }
+    ).select("-password");
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, updatedUser, "Avatar image updated successfully")
+        );
+});
+
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalPath = req.file?.path;
+
+    if (!coverImageLocalPath) {
+        throw new ApiError(400, "Cover image file is missing");
+    }
+
+    // Retrieve the user to get the current cover image
+    const user = await User.findById(req.user?._id);
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const oldCoverImage = user.coverImage;
+
+    // TODO: Delete old image
+    if (oldCoverImage) {
+        try {
+            // Assuming deleteFromCloudinary is a utility function
+            await deleteFromCloudinary(oldCoverImage);
+        } catch (error) {
+            console.error("Error deleting old cover image:", error);
+        }
+    }
+
+    // Upload the new cover image
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+    if (!coverImage.url) {
+        throw new ApiError(400, "Error while uploading cover image");
+    }
+
+    // Update the user's cover image
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                coverImage: coverImage.url,
+            },
+        },
+        { new: true }
+    ).select("-password");
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, updatedUser, "Cover image updated successfully")
+        );
+});
+
+
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken 
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage
 }

@@ -9,7 +9,10 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    const filter = query ? { title: new RegExp(query, 'i') } : {}
+    const filter = {
+        ...(query && { title: new RegExp(query, 'i') }),
+        ...(userId && { user: userId })
+    }
     const sort = sortBy ? { [sortBy]: sortType === 'desc' ? -1 : 1 } : {}
     const videos = await Video.find(filter)
         .sort(sort)

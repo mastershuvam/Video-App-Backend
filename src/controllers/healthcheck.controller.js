@@ -9,3 +9,7 @@ const healthcheck = asyncHandler(async (req, res, next) => {
         next(new ApiError(500, "Health check failed"));
     }
 })
+
+export {
+    healthcheck
+}
